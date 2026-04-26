@@ -91,6 +91,7 @@ pub struct RegexBlockFilter {
 }
 
 impl RegexBlockFilter {
+    #[allow(dead_code)] // public helper used by tests and available for future filters
     pub fn new(tool_name: &str, start_pattern: &str) -> Self {
         Self {
             start_re: Regex::new(start_pattern).unwrap_or_else(|e| {
@@ -175,6 +176,7 @@ impl<F: FnMut(&str) -> Option<String>> StreamFilter for LineFilter<F> {
 
 pub enum FilterMode<'a> {
     Streaming(Box<dyn StreamFilter + 'a>),
+    #[allow(dead_code)] // retained for buffered filters that need full-output context
     Buffered(Box<dyn Fn(&str) -> String + 'a>),
     CaptureOnly,
     Passthrough,
@@ -305,7 +307,7 @@ pub fn run_streaming(
             let mut err_out = stderr_out.lock();
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
                 writeln!(err_out, "{}", line).ok();
-                if raw_err.len() + line.len() + 1 <= RAW_CAP {
+                if raw_err.len() + line.len() < RAW_CAP {
                     raw_err.push_str(&line);
                     raw_err.push('\n');
                 } else if !capped {
@@ -315,7 +317,7 @@ pub fn run_streaming(
             }
         } else {
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                if raw_err.len() + line.len() + 1 <= RAW_CAP {
+                if raw_err.len() + line.len() < RAW_CAP {
                     raw_err.push_str(&line);
                     raw_err.push('\n');
                 } else if !capped {
@@ -343,7 +345,7 @@ pub fn run_streaming(
                     if capped {
                         continue;
                     }
-                    if raw_stdout.len() + line.len() + 1 <= RAW_CAP {
+                    if raw_stdout.len() + line.len() < RAW_CAP {
                         raw_stdout.push_str(&line);
                         raw_stdout.push('\n');
                     } else {
@@ -371,7 +373,7 @@ pub fn run_streaming(
             }
             FilterMode::Buffered(filter_fn) => {
                 for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-                    if raw_stdout.len() + line.len() + 1 <= RAW_CAP {
+                    if raw_stdout.len() + line.len() < RAW_CAP {
                         raw_stdout.push_str(&line);
                         raw_stdout.push('\n');
                     } else if !capped {
@@ -394,7 +396,7 @@ pub fn run_streaming(
             }
             FilterMode::CaptureOnly => {
                 for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-                    if raw_stdout.len() + line.len() + 1 <= RAW_CAP {
+                    if raw_stdout.len() + line.len() < RAW_CAP {
                         raw_stdout.push_str(&line);
                         raw_stdout.push('\n');
                     } else if !capped {
